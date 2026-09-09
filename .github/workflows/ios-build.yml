@@ -1,0 +1,63 @@
+name: iOS D-018 Compat Spike
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  ios-build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Env info
+        run: |
+          sw_vers
+          xcode-select -p
+          xcodebuild -version
+          gem list cocoapods | grep cocoapods
+          ruby --version
+          node --version
+          npm --version
+      - name: Node deps
+        run: npm install 2>&1 | tail -20
+      - name: CocoaPods install
+        working-directory: ios
+        env:
+          RCT_NEW_ARCH_ENABLED: 1
+        run: |
+          pod --version
+          pod install --verbose 2>&1 | tail -150
+      - name: Podfile.lock verification
+        working-directory: ios
+        run: |
+          echo "=== Native modules in Podfile.lock ==="
+          grep -E "React-Core|RNCWebView|LiveKitReactNative|LiveKitWebRTC|Firebase|Fabric" Podfile.lock | head -50 || true
+      - name: Build iOS (simulator, no signing)
+        working-directory: ios
+        run: |
+          set +e
+          xcodebuild -workspace MarqeyCompatSpike.xcworkspace \
+            -scheme MarqeyCompatSpike \
+            -sdk iphonesimulator \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            build \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tail -300
+          EXIT=$?
+          echo "BUILD_EXIT=$EXIT"
+          exit $EXIT
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-logs
+          path: |
+            ios/Podfile.lock
+            ios/build/**
+          if-no-files-found: warn
+          retention-days: 7
