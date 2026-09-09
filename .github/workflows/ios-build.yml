@@ -71,14 +71,22 @@ jobs:
           echo "BUILD_EXIT=$EXIT"
           tail -400 /tmp/xcodebuild.log
           exit $EXIT
+      - name: Deployment target evidence
+        if: always()
+        shell: bash
+        run: |
+          grep -m1 -o "IPHONEOS_DEPLOYMENT_TARGET=[0-9.]*" /tmp/xcodebuild.log || true
+          grep -m1 -o "\-target arm64-apple-ios[0-9.]*-simulator" /tmp/xcodebuild.log || true
+          grep -c "arm64-apple-ios16.0-simulator" /tmp/xcodebuild.log || true
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ios-build-logs-retry
+          name: ios-build-logs-ios16
           path: |
             ios/Podfile
             ios/Podfile.lock
+            package-lock.json
             /tmp/pod-install.log
             /tmp/xcodebuild.log
           if-no-files-found: warn
