@@ -14,7 +14,9 @@ jobs:
         with:
           node-version: '20'
       - name: Env info
+        shell: bash
         run: |
+          set -euo pipefail
           sw_vers
           xcode-select -p
           xcodebuild -version
@@ -23,23 +25,40 @@ jobs:
           node --version
           npm --version
       - name: Node deps
-        run: npm install 2>&1 | tail -20
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install 2>&1 | tail -20
       - name: CocoaPods install
         working-directory: ios
+        shell: bash
         env:
           RCT_NEW_ARCH_ENABLED: 1
+          USE_FRAMEWORKS: static
         run: |
+          set -euo pipefail
           pod --version
-          pod install --verbose 2>&1 | tail -150
-      - name: Podfile.lock verification
+          pod install --verbose > /tmp/pod-install.log 2>&1 && POD_EXIT=$? || POD_EXIT=$?
+          echo "POD_EXIT=$POD_EXIT"
+          tail -200 /tmp/pod-install.log
+          test -f Podfile.lock || { echo "FATAL: Podfile.lock missing after pod install"; exit 1; }
+          exit $POD_EXIT
+      - name: Podfile.lock native modules
         working-directory: ios
+        shell: bash
         run: |
+          set -euo pipefail
+          test -f Podfile.lock || { echo "FATAL: Podfile.lock missing"; exit 1; }
           echo "=== Native modules in Podfile.lock ==="
-          grep -E "React-Core|RNCWebView|LiveKitReactNative|LiveKitWebRTC|Firebase|Fabric" Podfile.lock | head -50 || true
+          grep -E "React-Core|RNCWebView|LiveKitReactNative|LiveKitWebRTC|Firebase|Fabric|WebRTC" Podfile.lock | head -50 || true
+          echo "=== Full Podfile.lock (first 100 lines) ==="
+          head -100 Podfile.lock
       - name: Build iOS (simulator, no signing)
         working-directory: ios
+        shell: bash
         run: |
-          set +e
+          set -uo pipefail
+          test -d MarqeyCompatSpike.xcworkspace || { echo "FATAL: xcworkspace missing"; exit 1; }
           xcodebuild -workspace MarqeyCompatSpike.xcworkspace \
             -scheme MarqeyCompatSpike \
             -sdk iphonesimulator \
@@ -47,17 +66,20 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             build \
             CODE_SIGNING_ALLOWED=NO \
-            2>&1 | tail -300
+            > /tmp/xcodebuild.log 2>&1
           EXIT=$?
           echo "BUILD_EXIT=$EXIT"
+          tail -400 /tmp/xcodebuild.log
           exit $EXIT
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ios-build-logs
+          name: ios-build-logs-retry
           path: |
+            ios/Podfile
             ios/Podfile.lock
-            ios/build/**
+            /tmp/pod-install.log
+            /tmp/xcodebuild.log
           if-no-files-found: warn
           retention-days: 7
