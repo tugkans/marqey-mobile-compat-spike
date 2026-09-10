@@ -1,8 +1,10 @@
+# CI DESIGN PRESERVED — EXECUTION AUTHORITY = LOCAL/N100 UNTIL NO-COST RUNNER AVAILABLE
+# D-045 NO_PAID_GITHUB_ACTIONS (2026-09-10): automatic triggers (push/pull_request/schedule)
+# disabled; manual workflow_dispatch only. Do NOT dispatch on paid GitHub-hosted minutes.
+# Repo retained as HISTORICAL COMPATIBILITY EVIDENCE only (D-018/D-034).
 name: iOS D-018 Compat Spike
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
 
 jobs:
   ios-build:

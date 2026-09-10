@@ -1,3 +1,6 @@
+> **STATUS: HISTORICAL COMPATIBILITY EVIDENCE — NO ACTIVE CI**
+> Automatic workflow triggers disabled 2026-09-10 (D-045 NO_PAID_GITHUB_ACTIONS). Repo retained as empirical evidence (D-018/D-034); deletion requires explicit user decision.
+
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
 # Getting Started
